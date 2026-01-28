@@ -15,7 +15,18 @@
       background:#fff; border-radius: 14px; padding: 18px;
       box-shadow: 0 6px 18px rgba(0,0,0,.06);
     }
-    h1 { font-size: 20px; margin: 0 0 10px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+
+    .notice {
+      margin: 6px 0 14px;
+      padding: 8px 12px;
+      background: #f8fafc;
+      border-left: 4px solid #7aa7ff;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #333;
+    }
+
     p.sub { margin: 0 0 16px; color:#555; font-size: 13px; }
 
     .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -25,12 +36,6 @@
     select {
       font-size: 14px; padding: 10px;
       border: 1px solid #d7dbe2; border-radius: 10px;
-    }
-
-    select:focus {
-      border-color:#7aa7ff;
-      box-shadow: 0 0 0 3px rgba(122,167,255,.25);
-      outline: none;
     }
 
     .row { display:flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
@@ -43,9 +48,8 @@
       margin-top: 14px; padding: 14px;
       border-radius: 12px; background:#f1f6ff; border:1px solid #d7e5ff;
     }
-    .result h2 { font-size: 16px; margin: 0 0 6px; }
-    .big { font-size: 26px; font-weight: 700; margin: 4px 0; }
-    .muted { font-size: 12px; color:#555; margin: 0; line-height: 1.4; }
+    .big { font-size: 26px; font-weight: 700; }
+    .muted { font-size: 12px; color:#555; }
 
     .err {
       margin-top: 12px; padding: 12px;
@@ -63,8 +67,14 @@
 <div class="wrap">
   <div class="card">
     <h1>对象存储容量计算器</h1>
+
+    <!-- 新增标注 -->
+    <div class="notice">
+      以下为 <strong>单站点</strong> 可用容量自动计算
+    </div>
+
     <p class="sub">
-      节点内 RAID + 节点间 EC / 副本，销售点选即可自动计算（TB）
+      节点内 RAID + 节点间 EC / 副本（结果同时展示 TB / TiB）
     </p>
 
     <div class="grid">
@@ -84,25 +94,20 @@
 
       <div class="field">
         <label>节点内磁盘数量（D）</label>
-        <select id="disks">
-          <option value="10">10</option>
-          <option value="11">11</option>
-          <option value="12" selected>12</option>
-        </select>
+        <select id="disks"></select>
       </div>
 
       <div class="field">
         <label>单盘容量（TB）</label>
         <select id="diskSize">
-          <option value="4">4</option>
-          <option value="6">6</option>
-          <option value="8">8</option>
-          <option value="10">10</option>
-          <option value="12">12</option>
-          <option value="14">14</option>
-          <option value="16">16</option>
-          <option value="18" selected>18</option>
-          <option value="20">20</option>
+          <option>2</option>
+          <option>4</option>
+          <option>6</option>
+          <option>8</option>
+          <option>10</option>
+          <option>12</option>
+          <option selected>18</option>
+          <option>20</option>
         </select>
       </div>
 
@@ -110,27 +115,29 @@
         <label>节点间数据保护模式</label>
         <select id="mode">
           <option value="ec" selected>纠删码（EC）</option>
-          <option value="replica">副本（Replica）</option>
+          <option value="replica">副本</option>
         </select>
       </div>
 
       <div class="field" id="ecField">
         <label>EC 方式</label>
         <select id="ec">
-          <option value="2+1">2+1</option>
-          <option value="4+1">4+1</option>
-          <option value="6+1">6+1</option>
-          <option value="4+2">4+2</option>
-          <option value="6+2">6+2</option>
-          <option value="6+3" selected>6+3</option>
-          <option value="8+2">8+2</option>
+          <option>2+1</option>
+          <option>4+1</option>
+          <option>6+1</option>
+          <option>4+2</option>
+          <option>6+2</option>
+          <option>8+2</option>
+          <option selected>6+3</option>
+          <option>9+3</option>
+          <option>7+5</option>
         </select>
       </div>
 
       <div class="field" id="replicaField" style="display:none;">
         <label>副本数量</label>
         <select id="replica">
-          <option value="2" selected>2 副本</option>
+          <option value="2">2 副本</option>
           <option value="3">3 副本</option>
         </select>
       </div>
@@ -141,26 +148,35 @@
     <div class="err" id="errBox"></div>
 
     <div class="result">
-      <h2>计算结果</h2>
-      <div class="big" id="usableTB">—</div>
+      <div class="big">
+        <span id="usableTB">—</span>
+        <span style="font-size:14px;">（<span id="usableTiB">—</span>）</span>
+      </div>
       <p class="muted" id="detail"></p>
     </div>
 
     <p class="muted" style="margin-top:10px;">
-      说明：可用容量 = 原始容量 × RAID 系数 ×（EC 系数 或 1/副本数）
+      说明：TiB = TB × 0.91（二进制损耗换算）
     </p>
   </div>
 </div>
 
 <script>
   const ecMinNodes = {
-    "2+1": 3, "4+1": 5, "6+1": 7,
-    "4+2": 6, "6+2": 8, "6+3": 9, "8+2": 10
+    "2+1":3,"4+1":5,"6+1":7,
+    "4+2":6,"6+2":8,"8+2":10,
+    "6+3":9,"9+3":12,"7+5":12
   };
 
   const ecFactor = {
-    "2+1": 2/3, "4+1": 4/5, "6+1": 6/7,
-    "4+2": 4/6, "6+2": 6/8, "6+3": 6/9, "8+2": 8/10
+    "2+1":2/3,"4+1":4/5,"6+1":6/7,
+    "4+2":4/6,"6+2":6/8,"8+2":8/10,
+    "6+3":6/9,"9+3":9/12,"7+5":7/12
+  };
+
+  const disksByRaid = {
+    "RAID5":[3,4,5,6,7,8,9,10,11,12],
+    "RAID6":[4,5,6,7,8,9,10,11,12]
   };
 
   const nodesSel = document.getElementById("nodes");
@@ -172,48 +188,46 @@
   const replicaSel = document.getElementById("replica");
   const ecField = document.getElementById("ecField");
   const replicaField = document.getElementById("replicaField");
-
   const usableTB = document.getElementById("usableTB");
+  const usableTiB = document.getElementById("usableTiB");
   const detail = document.getElementById("detail");
   const errBox = document.getElementById("errBox");
   const factorsRow = document.getElementById("factorsRow");
 
   for (let i = 3; i <= 20; i++) {
-    const opt = document.createElement("option");
-    opt.value = i;
-    opt.textContent = i;
-    nodesSel.appendChild(opt);
+    nodesSel.add(new Option(i, i));
   }
   nodesSel.value = 8;
 
-  function raidFactor(raid, d) {
-    return raid === "RAID5" ? (d-1)/d : (d-2)/d;
+  function refreshDisks() {
+    const list = disksByRaid[raidSel.value];
+    const cur = +disksSel.value;
+    disksSel.innerHTML = "";
+    list.forEach(d => disksSel.add(new Option(d, d)));
+    disksSel.value = list.includes(cur) ? cur : list[0];
+  }
+
+  function raidFactor(r, d) {
+    return r === "RAID5" ? (d - 1) / d : (d - 2) / d;
   }
 
   function calc() {
     const N = +nodesSel.value;
     const D = +disksSel.value;
-    const disk = +diskSizeSel.value;
-    const mode = modeSel.value;
-    const raid = raidSel.value;
+    const S = +diskSizeSel.value;
+    const raw = N * D * S;
+    const rf = raidFactor(raidSel.value, D);
 
-    const raw = N * D * disk;
-    const rf = raidFactor(raid, D);
+    factorsRow.innerHTML = `<span class="pill">RAID ${rf.toFixed(3)}</span>`;
 
-    factorsRow.innerHTML = "";
-    factorsRow.innerHTML += `<span class="pill">RAID 系数 ${rf.toFixed(3)}</span>`;
-
-    if (mode === "replica") {
+    if (modeSel.value === "replica") {
       ecField.style.display = "none";
       replicaField.style.display = "";
-
-      const r = +replicaSel.value;
-      const usable = raw * rf / r;
-
+      const u = raw * rf / (+replicaSel.value);
+      usableTB.textContent = u.toFixed(0) + " TB";
+      usableTiB.textContent = (u * 0.91).toFixed(0) + " TiB";
+      detail.textContent = `原始 ${raw} × RAID ${rf.toFixed(3)} ÷ 副本`;
       errBox.style.display = "none";
-      usableTB.textContent = usable.toFixed(0) + " TB";
-      detail.textContent =
-        `原始 ${raw} × RAID ${rf.toFixed(3)} ÷ 副本 ${r}`;
       return;
     }
 
@@ -221,30 +235,30 @@
     replicaField.style.display = "none";
 
     const ec = ecSel.value;
-    const minN = ecMinNodes[ec];
-
-    if (N < minN) {
+    if (N < ecMinNodes[ec]) {
       errBox.style.display = "block";
-      errBox.textContent = `节点数不足：${ec} 至少需要 ${minN} 个节点`;
+      errBox.textContent = `${ec} 至少需要 ${ecMinNodes[ec]} 个节点`;
       usableTB.textContent = "—";
+      usableTiB.textContent = "—";
       detail.textContent = "";
       return;
     }
 
     errBox.style.display = "none";
     const ef = ecFactor[ec];
-    const usable = raw * rf * ef;
+    const u = raw * rf * ef;
 
-    factorsRow.innerHTML += `<span class="pill">EC 系数 ${ef.toFixed(3)}</span>`;
-
-    usableTB.textContent = usable.toFixed(0) + " TB";
-    detail.textContent =
-      `原始 ${raw} × RAID ${rf.toFixed(3)} × EC ${ef.toFixed(3)}`;
+    factorsRow.innerHTML += `<span class="pill">EC ${ef.toFixed(3)}</span>`;
+    usableTB.textContent = u.toFixed(0) + " TB";
+    usableTiB.textContent = (u * 0.91).toFixed(0) + " TiB";
+    detail.textContent = `原始 ${raw} × RAID ${rf.toFixed(3)} × EC ${ef.toFixed(3)}`;
   }
 
-  [nodesSel, raidSel, disksSel, diskSizeSel, modeSel, ecSel, replicaSel]
-    .forEach(el => el.addEventListener("change", calc));
+  raidSel.onchange = () => { refreshDisks(); calc(); };
+  [nodesSel, disksSel, diskSizeSel, modeSel, ecSel, replicaSel]
+    .forEach(e => e.onchange = calc);
 
+  refreshDisks();
   calc();
 </script>
 </body>
