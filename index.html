@@ -68,7 +68,6 @@
   <div class="card">
     <h1>对象存储容量计算器</h1>
 
-    <!-- 新增标注 -->
     <div class="notice">
       以下为 <strong>单站点</strong> 可用容量自动计算
     </div>
@@ -106,6 +105,7 @@
           <option>8</option>
           <option>10</option>
           <option>12</option>
+          <option>16</option>
           <option selected>18</option>
           <option>20</option>
         </select>
@@ -194,9 +194,7 @@
   const errBox = document.getElementById("errBox");
   const factorsRow = document.getElementById("factorsRow");
 
-  for (let i = 3; i <= 20; i++) {
-    nodesSel.add(new Option(i, i));
-  }
+  for (let i = 3; i <= 20; i++) nodesSel.add(new Option(i, i));
   nodesSel.value = 8;
 
   function refreshDisks() {
